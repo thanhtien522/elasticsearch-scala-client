@@ -3,6 +3,7 @@ package rever.client4s
 import com.twitter.util.{Future, Promise}
 import org.elasticsearch.action.support.AbstractListenableActionFuture
 import org.elasticsearch.action.{ActionRequest, ActionRequestBuilder, ActionResponse}
+import org.elasticsearch.client.{Client, ElasticsearchClient}
 import org.elasticsearch.threadpool.ThreadPool
 
 import scala.annotation.tailrec
@@ -16,15 +17,16 @@ object Elasticsearch {
 
   type Req[T <: ActionRequest[T]] = ActionRequest[T]
   type Resp = ActionResponse
+  type Client[C <: ElasticsearchClient[C]] = ElasticsearchClient[C]
 
-  implicit class ZActionRequestBuilder[I <: Req[I], J <: Resp, K <: ActionRequestBuilder[I, J, K]](arb: ActionRequestBuilder[I, J, K]) {
+  implicit class ZActionRequestBuilder[I <: Req[I], J <: Resp, C <:Client[C], K <: ActionRequestBuilder[I, J, K, C]](arb: ActionRequestBuilder[I, J, K, C]) {
 
     private[this] val promise = Promise[J]()
 
     val internalThreadPool: ThreadPool = internalThreadPool(arb,arb.getClass)
 
     @tailrec
-    private[this] def internalThreadPool(arb: ActionRequestBuilder[I,J,K],cls: Class[_]): ThreadPool = {
+    private[this] def internalThreadPool(arb: ActionRequestBuilder[I,J,K,C],cls: Class[_]): ThreadPool = {
       if (cls.getSimpleName.equals("ActionRequestBuilder")) {
         val f = cls.getDeclaredField("threadPool")
         f.setAccessible(true)
@@ -35,7 +37,7 @@ object Elasticsearch {
     }
 
     def asyncGet(): Future[J] = {
-      val listener = new AbstractListenableActionFuture[J, J](internalThreadPool) {
+      val listener = new AbstractListenableActionFuture[J, J](true, internalThreadPool) {
         override def onFailure(e: Throwable): Unit = promise.raise(e)
 
         override def onResponse(result: J): Unit = promise.setValue(result)

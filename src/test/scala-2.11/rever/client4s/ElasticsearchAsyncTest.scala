@@ -9,7 +9,7 @@ import org.elasticsearch.action.get.GetResponse
 import org.elasticsearch.action.index.IndexResponse
 import org.elasticsearch.action.search.SearchResponse
 import org.elasticsearch.client.transport.TransportClient
-import org.elasticsearch.common.settings.Settings
+import org.elasticsearch.common.settings.{ImmutableSettings}
 import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.common.xcontent.XContentFactory
 import org.elasticsearch.index.query.TermQueryBuilder
@@ -17,8 +17,8 @@ import org.scalatest.FunSuite
 import rever.client4s.Elasticsearch._
 
 /**
- * Created by zkidkid on 10/6/16.
- */
+  * Created by zkidkid on 10/6/16.
+  */
 class ElasticsearchAsyncTest extends FunSuite {
   // Init TransportClient url: https://www.elastic.co/guide/en/elasticsearch/client/java-api/current/transport-client.html
   val clusterName = "elasticsearch"
@@ -26,13 +26,12 @@ class ElasticsearchAsyncTest extends FunSuite {
   val indexType = "test"
   val host = "127.0.0.1"
   val port = 9300
-  val settings = Settings.builder()
+  val settings = ImmutableSettings.builder()
     .put("cluster.name", clusterName)
     .build()
-  val client = TransportClient.builder()
-    .settings(settings)
-    .build()
-    .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host), port))
+  val client = new TransportClient(settings)
+
+  client.addTransportAddress(new InetSocketTransportAddress(host, port))
 
   println(s"Num Connected Node " + client.connectedNodes().size())
 
@@ -106,7 +105,6 @@ class ElasticsearchAsyncTest extends FunSuite {
 
     Await.ready(asyncDelResp, Duration.fromSeconds(5))
   }
-
 
 
   test("clear evn should successful") {
